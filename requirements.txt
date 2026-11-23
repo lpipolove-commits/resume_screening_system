@@ -4,3 +4,5 @@ pypdf
 scikit-learn
 sentence-transformers
 google-genai
+pypdf
+fpdf2
