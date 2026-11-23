@@ -25,12 +25,9 @@ st.set_page_config(
 
 CUSTOM_CSS = """
 <style>
-    /* พื้นหลังหลักและระยะห่าง */
     .stApp {
         background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
     }
-
-    /* Hero Banner */
     .hero-card {
         background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #2563eb 100%);
         color: #ffffff;
@@ -63,8 +60,6 @@ CUSTOM_CSS = """
         max-width: 780px;
         line-height: 1.6;
     }
-
-    /* Feature Cards */
     .feature-card {
         background: #ffffff;
         border: 1px solid #e2e8f0;
@@ -94,8 +89,6 @@ CUSTOM_CSS = """
         line-height: 1.55;
         margin: 0;
     }
-
-    /* Expander & Form styling */
     div[data-testid="stExpander"] {
         background: #ffffff;
         border: 1px solid #e2e8f0;
@@ -107,8 +100,6 @@ CUSTOM_CSS = """
         font-weight: 600;
         color: #0f172a;
     }
-
-    /* Buttons */
     .stButton > button, .stDownloadButton > button {
         border-radius: 10px;
         font-weight: 600;
@@ -394,14 +385,16 @@ def _render_candidate_portal():
             key=f"candidate_pdf_uploader_{nonce}",
         )
 
+        # เมื่อมีการใส่ไฟล์ PDF ใหม่ ให้ล้างข้อความแชท AI เดิมออกทันที
         if uploaded_pdf is not None and uploaded_pdf.name != st.session_state["last_uploaded_pdf_name"]:
             try:
                 extracted_text = _extract_pdf_text(uploaded_pdf)
                 st.session_state["last_uploaded_pdf_name"] = uploaded_pdf.name
                 st.session_state["pdf_extracted_text"] = extracted_text
+                st.session_state["candidate_chat_history"] = []  # ล้างข้อความ AI เดิมเมื่อเปลี่ยนไฟล์
                 if extracted_text:
                     st.session_state[k_resume] = extracted_text
-                    st.success(f"ดึงข้อความจากไฟล์ **{uploaded_pdf.name}** สำเร็จแล้วครับ")
+                    st.success(f"ดึงข้อความจากไฟล์ **{uploaded_pdf.name}** สำเร็จแล้วครับ (รีเซ็ตแชท AI สำหรับคนใหม่)")
                     st.rerun()
                 else:
                     st.warning(
@@ -441,6 +434,7 @@ def _render_candidate_portal():
                 st.session_state["current_candidate"] = saved_profile
                 st.session_state["pdf_extracted_text"] = ""
                 st.session_state["last_uploaded_pdf_name"] = ""
+                st.session_state["candidate_chat_history"] = []  # ล้างข้อความ AI เดิมเมื่อบันทึกข้อมูลคนใหม่
 
                 next_nonce = nonce + 1
                 st.session_state["form_nonce"] = next_nonce
@@ -455,6 +449,14 @@ def _render_candidate_portal():
                 st.rerun()
 
     st.markdown("### 💬 คุยกับ AI Career Coach")
+
+    # เพิ่มปุ่มกดรีเซ็ตข้อความแชทด้วยตนเอง
+    c_head, c_clear = st.columns([5, 1])
+    with c_clear:
+        if st.session_state["candidate_chat_history"]:
+            if st.button("🗑️ ล้างแชท", key="clear_chat_btn", use_container_width=True):
+                st.session_state["candidate_chat_history"] = []
+                st.rerun()
 
     active_profile = st.session_state.get("current_candidate") or {
         "name": "-",
