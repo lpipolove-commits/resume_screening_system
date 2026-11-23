@@ -16,31 +16,37 @@ def _call_gemini(prompt: str) -> str | None:
     if not api_key:
         return None
 
-    # ลองใช้ SDK รุ่นใหม่ google-genai ก่อน
     try:
         from google import genai
 
         client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
-        text = getattr(response, "text", None)
-        if text and text.strip():
-            return text.strip()
+        for model_name in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                )
+                text = getattr(response, "text", None)
+                if text and text.strip():
+                    return text.strip()
+            except Exception:
+                continue
     except Exception:
         pass
 
-    # สำรองด้วย SDK รุ่นเก่า google-generativeai หากติดตั้งไว้
     try:
         import google.generativeai as genai_legacy
 
         genai_legacy.configure(api_key=api_key)
-        model = genai_legacy.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(prompt)
-        text = getattr(response, "text", None)
-        if text and text.strip():
-            return text.strip()
+        for model_name in ("gemini-2.5-flash", "gemini-1.5-flash"):
+            try:
+                model = genai_legacy.GenerativeModel(model_name)
+                response = model.generate_content(prompt)
+                text = getattr(response, "text", None)
+                if text and text.strip():
+                    return text.strip()
+            except Exception:
+                continue
     except Exception:
         pass
 
@@ -75,7 +81,7 @@ def ask_career_agent(profile: dict, user_msg: str) -> str:
         "- **จุดแข็งที่ควรชู:** เน้นทักษะและผลงานที่สอดคล้องกับตำแหน่งเป้าหมายให้เห็นชัดเจนในย่อหน้าแรก\n"
         "- **การปรับเรซูเม่:** เพิ่มตัวเลขหรือผลลัพธ์เชิงปริมาณ (เช่น % ที่เพิ่มขึ้น หรือเวลาที่ลดลง) ในประสบการณ์ทำงาน\n"
         "- **การเตรียมสัมภาษณ์:** เตรียมยกตัวอย่างโปรเจกต์จริง 1–2 ตัวอย่าง พร้อมอธิบายบทบาทและวิธีแก้ปัญหาของคุณ\n\n"
-        "*(หมายเหตุ: ขณะนี้ยังไม่ได้เชื่อมต่อ `GEMINI_API_KEY` ใน Secrets จึงแสดงคำตอบโหมดสาธิตครับ)*"
+        "*(หมายเหตุ: ไม่สามารถเรียก Gemini API ได้ในขณะนี้ กรุณาตรวจสอบ GEMINI_API_KEY ใน Secrets และแพ็กเกจ google-genai ใน requirements.txt)*"
     )
 
 
@@ -103,12 +109,12 @@ def ask_hr_agent(candidates: list[dict], hr_prompt: str) -> str:
     if ai_reply:
         return ai_reply
 
-    lines = [f"**สรุปรายชื่อผู้สมัครทั้งหมด {len(candidates)} คน (โหมดสาธิต):**\n"]
+    lines = [f"**สรุปรายชื่อผู้สมัครทั้งหมด {len(candidates)} คน:**\n"]
     for idx, c in enumerate(candidates[:10], start=1):
         lines.append(
             f"- **{idx}. {c.get('name', '-')}** — ตำแหน่ง: *{c.get('target_role', '-')}* ({c.get('contact', '-')})"
         )
     lines.append(
-        "\n*(หมายเหตุ: ขณะนี้ยังไม่ได้ตั้งค่า `GEMINI_API_KEY` ใน Secrets จึงแสดงรายชื่อสรุปเบื้องต้นครับ)*"
+        "\n*(หมายเหตุ: ไม่สามารถเรียก Gemini API ได้ในขณะนี้ กรุณาตรวจสอบ GEMINI_API_KEY ใน Secrets และแพ็กเกจ google-genai ใน requirements.txt)*"
     )
     return "\n".join(lines)
